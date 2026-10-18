@@ -139,6 +139,16 @@
   .panel{backdrop-filter:blur(8px)}
   .opt.correct{box-shadow:0 0 0 4px rgba(34,197,94,.18)}
   .rank{display:inline-block;margin-top:8px;padding:4px 14px;border-radius:99px;font-weight:800;background:linear-gradient(90deg,var(--c1),var(--c5));color:#fff}
+  .snip{background:#0b0d1a;color:#c9d1ff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:12px 0 0;font:.9rem/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-x:auto}
+  .fillbox{display:flex;gap:10px} .fillbox input{flex:1;font-family:ui-monospace,Menlo,Consolas,monospace}
+  #quiz.paused #qtext,#quiz.paused #opts{filter:blur(14px);pointer-events:none;user-select:none}
+  .bar-row{display:grid;grid-template-columns:92px 1fr 44px;gap:10px;align-items:center;margin-bottom:6px;font-size:.88rem}
+  .bar-track{height:10px;border-radius:99px;background:var(--card2);overflow:hidden}
+  .bar-fill{height:100%;border-radius:99px;width:0;transition:width .9s ease}
+  .badge-a{padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--card2);font-weight:700;font-size:.85rem}
+  .timechart{display:flex;align-items:flex-end;gap:5px;height:64px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--card2)}
+  .timechart i{flex:1;border-radius:5px 5px 2px 2px;min-height:4px}
+  .lb{width:100%;font-size:.9rem} .lb td{padding:6px 8px;border-bottom:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -198,7 +208,7 @@
       <button class="btn btn-go" id="startBtn">Start quiz</button>
       <span class="best" id="bestBox" hidden></span>
     </div>
-    <p class="mt-4 mb-0 small" style="color:var(--muted)">Tip: press <b>1–4</b> to answer, <b>Enter</b> for next, and use 50/50 once per quiz.</p>
+    <p class="mt-4 mb-0 small" style="color:var(--muted)">Tip: press <b>1–4</b> to answer, <b>Enter</b> for next, and use 50/50 and +10s once each. P pauses.</p>
   </section>
 
   <!-- QUIZ -->
@@ -222,7 +232,7 @@
     <div id="opts"></div>
     <div class="explain" id="explain"></div>
     <div class="actions">
-      <button class="btn btn-soft" id="fiftyBtn">50 / 50</button>
+      <div class="d-flex gap-2 flex-wrap"><button class="btn btn-soft" id="fiftyBtn">50 / 50</button><button class="btn btn-soft" id="freezeBtn">+10s</button><button class="btn btn-soft" id="pauseBtn">Pause</button></div>
       <button class="btn btn-go" id="nextBtn" disabled>Next</button>
     </div>
   </section>
@@ -241,10 +251,15 @@
       <div class="stat"><b id="sWrong">0</b><span>Wrong or missed</span></div>
       <div class="stat"><b id="sPoints">0</b><span>Points</span></div>
     </div>
-    <div class="review mb-3" id="review"></div>
+    <h3 class="h6 mb-2">Topic breakdown</h3><div id="cats" class="mb-3"></div>
+    <h3 class="h6 mb-2">Time per question</h3><div id="timeChart" class="timechart mb-3"></div>
+    <h3 class="h6 mb-2">Badges</h3><div id="badges" class="d-flex flex-wrap gap-2 mb-3"></div>
+    <h3 class="h6 mb-2">Top 5 on this device</h3><table class="lb mb-3" id="lb"></table>
+    <h3 class="h6 mb-2">Review</h3><div class="review mb-3" id="review"></div>
     <div class="d-flex flex-wrap gap-2">
       <button class="btn btn-go" id="pdfBtn">Download PDF</button>
       <button class="btn btn-soft" id="againBtn">Play again</button>
+      <button class="btn btn-soft" id="retryBtn">Retry missed</button>
     </div>
   </section>
 </div>
@@ -324,6 +339,25 @@ const NEW = [
 ["Bootstrap","Advanced","Which attribute enables dark mode in Bootstrap 5.3?",["data-bs-theme=\"dark\"","class=\"dark-mode\"","theme=\"dark\"","bs-dark=\"true\""],0,"Set data-bs-theme on <html> or any element to switch its color mode."]
 ];
 NEW.forEach(r => BANK.push({ cat:r[0], l:r[1], q:r[2], o:r[3], a:r[4], e:r[5] }));
+const A=(cat,l,q,o,a,e,code)=>BANK.push({cat,l,q,o,a,e,code});
+const F=(cat,l,q,fill,e,code)=>BANK.push({cat,l,q,fill,e,code});
+A("JavaScript","Medium","What is printed?",["array","object","undefined","list"],1,"Arrays are objects, so typeof [] is \"object\". Use Array.isArray() to test.","console.log(typeof []);");
+A("JavaScript","Advanced","What is printed?",["true","false","NaN","Error"],1,"Floating-point rounding makes 0.1 + 0.2 equal 0.30000000000000004.","console.log(0.1 + 0.2 === 0.3);");
+A("JavaScript","Advanced","What is printed?",["3","4","undefined","Error"],1,"Arrays are copied by reference, so a and b point to the same array.","let a = [1, 2, 3];\nlet b = a;\nb.push(4);\nconsole.log(a.length);");
+A("JavaScript","Medium","What is printed?",["[\"h\",\"i\"]","[\"hi\"]","\"hi\"","Error"],0,"Spread turns a string into an array of characters.","console.log([...\"hi\"]);");
+A("JavaScript","Advanced","In what order are the numbers printed?",["1 2 3","1 3 2","2 1 3","3 2 1"],1,"setTimeout callbacks run after the current code finishes, even with 0 delay.","console.log(1);\nsetTimeout(() => console.log(2), 0);\nconsole.log(3);");
+A("CSS","Advanced","What colour is the paragraph?",["red","blue","black","purple"],1,"The ID selector (#b) is more specific than the class selector (.a).",".a { color: red; }\n#b { color: blue; }\n/* <p id=\"b\" class=\"a\"> */");
+A("CSS","Medium","What is the left and right margin?",["10px","20px","30px","0"],1,"Two values mean top/bottom first, then left/right.","div { margin: 10px 20px; }");
+F("HTML","Easy","Type the tag used for the largest heading.",["<h1>","h1"],"<h1> is the top-level heading.");
+F("CSS","Easy","Type the CSS property that sets text colour.",["color"],"color sets the text colour; background-color sets the background.");
+F("CSS","Medium","Complete it: display: ____; (turns an element into a flex container)",["flex"],"display: flex enables flexbox on the container.");
+F("CSS","Medium","Type the viewport-height unit (two letters).",["vh"],"1vh equals 1% of the viewport height.");
+F("CSS","Advanced","Type the at-rule used to define CSS animation steps (include the @).",["@keyframes"],"@keyframes pairs with the animation property.");
+F("CSS","Advanced","Type the CSS function that reads a custom property like --brand.",["var","var()"],"color: var(--brand);");
+F("JavaScript","Easy","Type the keyword that declares a constant.",["const"],"const cannot be reassigned.");
+F("JavaScript","Medium","Type the array method that adds an item to the START.",["unshift","unshift()"],"unshift() adds to the start; push() adds to the end.");
+F("JavaScript","Advanced","Type the operator that checks value AND type.",["==="],"=== is strict equality with no type coercion.");
+F("HTML","Medium","Type the attribute that links a <label> to an input's id.",["for"],"<label for=\"email\"> targets <input id=\"email\">.");
 const COLORS = ["#4285f4","#34a853","#fbbc05","#ea4335","#a855f7"];
 
 /* ---------- Helpers ---------- */
@@ -374,13 +408,13 @@ function startQuiz(){
   if(pool.length < 5) pool = BANK;
   const count = Math.min(+$("countSel").value, pool.length);
   const picked = shuffle(pool).slice(0, count).map(q => {
-    const opts = shuffle(q.o.map((t,i) => ({ t, ok: i === q.a })));
-    return { cat:q.cat, l:q.l, q:q.q, e:q.e, opts };
+    const opts = q.o ? shuffle(q.o.map((t,i) => ({ t, ok: i === q.a }))) : [];
+    return { cat:q.cat, l:q.l, q:q.q, e:q.e, opts, fill:q.fill, code:q.code };
   });
   S = {
     name: $("nameIn").value.trim() || "Student",
     qs: picked, i: 0, score: 0, points: 0, streak: 0, best: 0,
-    secs: +$("levelSel").value, left: 0, locked: false, fifty: false, log: []
+    secs: +$("levelSel").value, left: 0, locked: false, fifty: false, freeze: false, paused: false, log: []
   };
   $("segbar").innerHTML = S.qs.map(() => `<div class="seg"></div>`).join("");
   show("quiz");
@@ -405,7 +439,7 @@ function renderQ(){
   $("chipCat").textContent = q.cat + " - " + q.l; $("chipCat").className = "chip lv-" + q.l;
   $("chipScore").textContent = "Score " + S.score;
   $("chipStreak").textContent = "Streak " + S.streak;
-  $("qtext").innerHTML = codify(q.q);
+  $("qtext").innerHTML = codify(q.q) + (q.code ? '<pre class="snip">' + esc(q.code) + "</pre>" : "");
   $("explain").classList.remove("show");
   $("nextBtn").disabled = true;
   $("nextBtn").textContent = S.i === S.qs.length - 1 ? "See results" : "Next";
@@ -413,6 +447,14 @@ function renderQ(){
   $("opts").innerHTML = q.opts.map((o,i) =>
     `<button class="opt" data-i="${i}"><span class="key">${i+1}</span><span>${codify(o.t)}</span></button>`).join("");
   document.querySelectorAll(".opt").forEach(b => b.onclick = () => choose(+b.dataset.i));
+  S.paused = false; S.typed = ""; $("quiz").classList.remove("paused"); $("pauseBtn").textContent = "Pause";
+  $("fiftyBtn").disabled = S.fifty || !!q.fill; $("freezeBtn").disabled = !!S.freeze;
+  if(q.fill){
+    $("opts").innerHTML = '<div class="fillbox"><input id="fillIn" class="form-control" placeholder="Type your answer" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn btn-go" id="fillBtn">Check</button></div>';
+    $("fillBtn").onclick = submitFill;
+    $("fillIn").onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); submitFill(); } };
+    $("fillIn").focus({preventScroll:true});
+  }
   paintSegs();
   startTimer();
 }
@@ -424,21 +466,22 @@ function startTimer(){
   drawTimer();
   void $("ringBar").getBoundingClientRect();
   $("ringBar").style.transition = "";
-  timerId = setInterval(() => {
-    S.left--;
-    drawTimer();
-    if(S.left <= 5 && S.left > 0) beep(880, .06, "square");
-    if(S.left <= 0){ clearInterval(timerId); finishQ(-1); }
-  }, 1000);
+  timerId = setInterval(tick, 1000);
+}
+function tick(){
+  S.left--;
+  drawTimer();
+  if(S.left <= 5 && S.left > 0) beep(880, .06, "square");
+  if(S.left <= 0){ clearInterval(timerId); finishQ(-1); }
 }
 function drawTimer(){
   $("tleft").textContent = Math.max(S.left,0);
-  const frac = Math.max(S.left,0) / S.secs;
+  const frac = Math.min(1, Math.max(S.left,0) / S.secs);
   $("ringBar").style.strokeDashoffset = CIRC * (1 - frac);
   $("ring").className = "ring" + (frac <= .3 ? " danger" : frac <= .6 ? " warn" : "");
 }
 
-function choose(i){ if(S.locked) return; clearInterval(timerId); finishQ(i); }
+function choose(i){ if(S.locked || S.paused) return; clearInterval(timerId); finishQ(i); }
 
 function finishQ(i){
   if(S.locked) return;
@@ -448,20 +491,21 @@ function finishQ(i){
   const correctIdx = q.opts.findIndex(o => o.ok);
   const btns = document.querySelectorAll(".opt");
   btns.forEach(b => b.disabled = true);
-  btns[correctIdx].classList.add("correct");
+  const fi = $("fillIn"); if(fi) fi.disabled = true;
+  if(!q.fill) btns[correctIdx].classList.add("correct");
   let status;
   if(i === -1){ status = "Timed out"; S.streak = 0; beep(180, .3, "sawtooth"); }
-  else if(i === correctIdx){
+  else if(q.fill ? i === -3 : i === correctIdx){
     status = "Correct"; S.streak++; S.best = Math.max(S.best, S.streak); S.score++;
     const gain = 100 + S.left * 5 + (S.streak > 1 ? (S.streak - 1) * 20 : 0);
-    S.points += gain; if(S.streak >= 3) confetti(45); popPoints(btns[i], "+" + gain); beep(660); setTimeout(() => beep(880), 110);
+    S.points += gain; if(S.streak >= 3) confetti(45); popPoints(q.fill ? $("qtext") : btns[i], "+" + gain); beep(660); setTimeout(() => beep(880), 110);
   } else {
-    status = "Incorrect"; S.streak = 0; btns[i].classList.add("wrong"); beep(200, .25, "sawtooth");
+    status = "Incorrect"; S.streak = 0; if(!q.fill) btns[i].classList.add("wrong"); beep(200, .25, "sawtooth");
   }
-  S.log[S.i] = { q:q.q, your: i === -1 ? "No answer" : q.opts[i].t, correct: q.opts[correctIdx].t, status, e:q.e };
+  S.log[S.i] = { q:q.q, cat:q.cat, l:q.l, t:S.secs - Math.max(S.left,0), your: i === -1 ? "No answer" : q.fill ? S.typed : q.opts[i].t, correct: q.fill ? q.fill[0] : q.opts[correctIdx].t, status, e:q.e };
   $("chipScore").textContent = "Score " + S.score;
   $("chipStreak").textContent = "Streak " + S.streak;
-  $("explain").textContent = q.e;
+  $("explain").textContent = (q.fill ? "Answer: " + q.fill[0] + ". " : "") + q.e;
   $("explain").classList.add("show");
   $("nextBtn").disabled = false;
   $("nextBtn").focus({preventScroll:true});
@@ -482,7 +526,7 @@ $("nextBtn").onclick = () => {
 };
 
 $("fiftyBtn").onclick = () => {
-  if(S.locked || S.fifty) return;
+  if(S.locked || S.fifty || S.paused) return;
   S.fifty = true; $("fiftyBtn").disabled = true;
   const q = S.qs[S.i];
   const wrongIdx = shuffle(q.opts.map((o,i) => i).filter(i => !q.opts[i].ok)).slice(0, 2);
@@ -493,11 +537,43 @@ $("fiftyBtn").onclick = () => {
 
 document.addEventListener("keydown", e => {
   if(!S || !$("quiz").classList.contains("active")) return;
+  if(e.target.tagName === "INPUT") return;
+  if(e.key.toLowerCase() === "p"){ $("pauseBtn").click(); return; }
   if(["1","2","3","4"].includes(e.key) && !S.locked){
     const i = +e.key - 1, b = document.querySelectorAll(".opt")[i];
     if(b && !b.disabled) choose(i);
   } else if(e.key === "Enter" && S.locked){ e.preventDefault(); $("nextBtn").click(); }
 });
+
+function submitFill(){
+  if(S.locked || S.paused) return;
+  const q = S.qs[S.i], v = $("fillIn").value.trim();
+  if(!v) return;
+  const ok = q.fill.some(a => a.toLowerCase() === v.toLowerCase());
+  S.typed = v; clearInterval(timerId);
+  $("fillIn").classList.add(ok ? "is-valid" : "is-invalid");
+  finishQ(ok ? -3 : -2);
+}
+$("pauseBtn").onclick = () => {
+  if(S.locked) return;
+  S.paused = !S.paused;
+  $("quiz").classList.toggle("paused", S.paused);
+  $("pauseBtn").textContent = S.paused ? "Resume" : "Pause";
+  clearInterval(timerId);
+  if(!S.paused) timerId = setInterval(tick, 1000);
+};
+$("freezeBtn").onclick = () => { if(S.locked || S.paused || S.freeze) return; S.freeze = true; $("freezeBtn").disabled = true; S.left += 10; drawTimer(); beep(740,.1); };
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden && S && $("quiz").classList.contains("active") && !S.locked && !S.paused) $("pauseBtn").click();
+});
+$("retryBtn").onclick = () => {
+  const miss = S.qs.filter((q,i) => S.log[i].status !== "Correct");
+  if(!miss.length) return;
+  const o = S;
+  S = { name:o.name, qs:shuffle(miss).map(q => ({...q, opts:shuffle(q.opts)})), i:0, score:0, points:0, streak:0, best:0, secs:o.secs, left:0, locked:false, fifty:false, freeze:false, paused:false, retry:true, log:[] };
+  $("segbar").innerHTML = S.qs.map(() => '<div class="seg"></div>').join("");
+  show("quiz"); renderQ();
+};
 
 /* ---------- Results ---------- */
 function results(){
@@ -516,13 +592,30 @@ function results(){
   d.style.setProperty("--p", 0);
   const step = () => { p = Math.min(p + 2, pct); d.style.setProperty("--p", p); if(p < pct) requestAnimationFrame(step); };
   step();
+  const cats = {};
+  S.log.forEach(r => { const c = cats[r.cat] = cats[r.cat] || {c:0,t:0}; c.t++; if(r.status === "Correct") c.c++; });
+  $("cats").innerHTML = Object.entries(cats).map(([k,v],i) => `<div class="bar-row"><span>${k}</span><div class="bar-track"><div class="bar-fill" data-w="${Math.round(v.c/v.t*100)}" style="background:${COLORS[i%5]}"></div></div><b>${v.c}/${v.t}</b></div>`).join("");
+  setTimeout(() => document.querySelectorAll(".bar-fill").forEach(b => b.style.width = b.dataset.w + "%"), 60);
+  $("timeChart").innerHTML = S.log.map((r,i) => `<i title="Q${i+1}: ${r.t}s" style="height:${Math.max(6, r.t/S.secs*100)}%;background:${r.status === "Correct" ? "var(--ok)" : "var(--bad)"}"></i>`).join("");
+  const okq = S.log.filter(r => r.status === "Correct");
+  S.badges = [];
+  if(S.score === total) S.badges.push("Perfectionist");
+  if(okq.length && okq.reduce((a,r) => a + r.t, 0) / okq.length < S.secs * 0.4) S.badges.push("Speedster");
+  if(S.best >= 4) S.badges.push("On Fire");
+  if(okq.filter(r => r.l === "Advanced").length >= 3) S.badges.push("Advanced Mind");
+  if(pct >= 70 && !S.fifty && !S.freeze) S.badges.push("No Lifelines");
+  $("badges").innerHTML = S.badges.length ? S.badges.map(b => `<span class="badge-a">${b}</span>`).join("") : '<span class="badge-a" style="color:var(--muted)">No badges yet. Try a streak of 4.</span>';
+  $("retryBtn").hidden = S.score === total;
+  let lb = []; try { lb = JSON.parse(safeGet("wq-lb") || "[]"); } catch(e){}
+  if(!S.retry){ lb.push({n:S.name, p:S.points, pc:pct}); lb.sort((a,b) => b.p - a.p); lb = lb.slice(0,5); safeSet("wq-lb", JSON.stringify(lb)); }
+  $("lb").innerHTML = lb.map((r,i) => `<tr><td>${i+1}</td><td>${esc(r.n)}</td><td>${r.p} pts</td><td>${r.pc}%</td></tr>`).join("");
   $("review").innerHTML = S.log.map((r,i) => {
     const cls = r.status === "Correct" ? "ok" : r.status === "Timed out" ? "skip" : "bad";
     return `<div class="rv"><div class="q">${i+1}. ${esc(r.q)}</div><span class="badge-s ${cls}">${r.status}</span>
       <div class="a">Your answer: ${esc(r.your)} &nbsp;|&nbsp; Correct: ${esc(r.correct)}</div><div class="a">Why: ${esc(r.e)}</div></div>`;
   }).join("");
   const prev = +safeGet("wq-best") || 0;
-  if(pct > prev) safeSet("wq-best", pct);
+  if(pct > prev && !S.retry) safeSet("wq-best", pct);
   if(pct >= 70){ confetti(); beep(523,.12); setTimeout(()=>beep(659,.12),130); setTimeout(()=>beep(784,.2),260); }
 }
 
@@ -545,16 +638,18 @@ $("pdfBtn").onclick = () => {
   doc.text(`Date: ${new Date().toLocaleString()}`, 14, 55);
   doc.text(`Score: ${S.score} / ${S.qs.length}  (${S.pct}%)`, 120, 48);
   doc.text(`Points: ${S.points}   Best streak: ${S.best}`, 120, 55);
+  doc.text(`Rank: ${S.rank}`, 120, 62);
+  doc.text("Badges: " + (S.badges.join(", ") || "none"), 14, 69);
 
   doc.autoTable({
-    startY: 62,
-    head: [["#", "Question", "Your answer", "Correct answer", "Status"]],
-    body: S.log.map((r,i) => [i+1, r.q, r.your, r.correct, r.status]),
+    startY: 77,
+    head: [["#", "Topic", "Question", "Your answer", "Correct answer", "Status"]],
+    body: S.log.map((r,i) => [i+1, r.cat, r.q, r.your, r.correct, r.status]),
     styles: { fontSize: 9, cellPadding: 3, valign: "middle" },
     headStyles: { fillColor: [66,133,244] },
-    columnStyles: { 0:{cellWidth:9}, 4:{cellWidth:24, fontStyle:"bold", halign:"center"} },
+    columnStyles: { 0:{cellWidth:8}, 1:{cellWidth:20}, 5:{cellWidth:22, fontStyle:"bold", halign:"center"} },
     didParseCell: d => {
-      if(d.section === "body" && d.column.index === 4){
+      if(d.section === "body" && d.column.index === 5){
         const v = d.cell.raw;
         d.cell.styles.fillColor = v === "Correct" ? [34,197,94] : v === "Timed out" ? [107,114,128] : [239,68,68];
         d.cell.styles.textColor = 255;
